@@ -4,10 +4,12 @@ using Microsoft.EntityFrameworkCore.Metadata;
 
 namespace Beacon.Server.Models
 {
-    public partial class beaconContext : DbContext
+    public partial class BeaconContext : DbContext
     {
         public virtual DbSet<Event> Event { get; set; }
-        public virtual DbSet<Users> Users { get; set; }
+        public virtual DbSet<Token> Token { get; set; }
+        public virtual DbSet<User> User { get; set; }
+        public virtual DbSet<Vote> Vote { get; set; }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
@@ -19,70 +21,90 @@ namespace Beacon.Server.Models
         {
             modelBuilder.Entity<Event>(entity =>
             {
-                entity.HasKey(e => e.Eid)
-                    .HasName("PK__event__D9509F6D2BEB659E");
+                entity.HasIndex(e => e.Latitude)
+                    .HasName("IX_Latitude");
 
-                entity.ToTable("event");
+                entity.HasIndex(e => e.Longitude)
+                    .HasName("IX_Longitude");
 
-                entity.Property(e => e.Eid)
-                    .HasColumnName("eid")
-                    .ValueGeneratedNever();
+                entity.Property(e => e.Description).HasColumnType("text");
 
-                entity.Property(e => e.CreatorId).HasColumnName("creator_id");
+                entity.Property(e => e.Latitude).HasColumnType("decimal");
 
-                entity.Property(e => e.EDescription)
-                    .HasColumnName("e_description")
-                    .HasColumnType("text");
+                entity.Property(e => e.Longitude).HasColumnType("decimal");
 
-                entity.Property(e => e.EName)
-                    .HasColumnName("e_name")
-                    .HasColumnType("varchar(1)");
+                entity.Property(e => e.Name).HasColumnType("varchar(20)");
 
-                entity.Property(e => e.TimeLastUpdated)
-                    .IsRequired()
-                    .HasColumnName("time_last_updated")
-                    .HasColumnType("timestamp")
-                    .ValueGeneratedOnAddOrUpdate();
+                entity.Property(e => e.TimeLastUpdated).HasColumnType("datetime");
 
                 entity.HasOne(d => d.Creator)
                     .WithMany(p => p.Event)
                     .HasForeignKey(d => d.CreatorId)
-                    .HasConstraintName("FK__event__creator_i__4316F928");
+                    .HasConstraintName("CreatorID");
             });
 
-            modelBuilder.Entity<Users>(entity =>
+            modelBuilder.Entity<Token>(entity =>
             {
-                entity.HasKey(e => e.Uid)
-                    .HasName("PK_users");
+                entity.HasKey(e => e.Value)
+                    .HasName("PK__Token__07D9BBC3C6FA51B9");
 
-                entity.ToTable("users");
+                entity.Property(e => e.Value).HasColumnType("varchar(50)");
 
-                entity.Property(e => e.Uid)
-                    .HasColumnName("uid")
-                    .ValueGeneratedNever();
+                entity.HasOne(d => d.CorrespondingLogin)
+                    .WithMany(p => p.Token)
+                    .HasForeignKey(d => d.CorrespondingLoginId)
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .HasConstraintName("FK_CorrespondingLoginId");
+            });
 
-                entity.Property(e => e.Birthdate)
-                    .HasColumnName("birthdate")
-                    .HasColumnType("date");
+            modelBuilder.Entity<User>(entity =>
+            {
+                entity.Property(e => e.Id).ValueGeneratedNever();
 
-                entity.Property(e => e.Email)
+                entity.Property(e => e.CurrentAttendedEventId).HasColumnName("CurrentAttendedEventID");
+
+                entity.Property(e => e.FirstName)
                     .IsRequired()
-                    .HasColumnName("email")
-                    .HasColumnType("varchar(50)");
-
-                entity.Property(e => e.Fname)
-                    .IsRequired()
-                    .HasColumnName("fname")
-                    .HasColumnType("varchar(50)");
-
-                entity.Property(e => e.Lname)
-                    .IsRequired()
-                    .HasColumnName("lname")
-                    .HasColumnType("varchar(50)");
-
-                entity.Property(e => e.Username)
-                    .HasColumnName("username")
                     .HasColumnType("varchar(20)");
+
+                entity.Property(e => e.HashedPassword)
+                    .IsRequired()
+                    .HasColumnType("varchar(50)");
+
+                entity.Property(e => e.LastName)
+                    .IsRequired()
+                    .HasColumnType("varchar(20)");
+
+                entity.Property(e => e.Salt)
+                    .IsRequired()
+                    .HasColumnType("varchar(20)");
+
+                entity.Property(e => e.UserName)
+                    .IsRequired()
+                    .HasColumnType("varchar(20)");
+
+                entity.HasOne(d => d.CurrentAttendedEvent)
+                    .WithMany(p => p.User)
+                    .HasForeignKey(d => d.CurrentAttendedEventId)
+                    .HasConstraintName("FK_CurrentAttendedEventId");
+            });
+
+            modelBuilder.Entity<Vote>(entity =>
+            {
+                entity.HasKey(e => new { e.EventId, e.UserId })
+                    .HasName("PK__Vote__A83C44D4D24D79A8");
+
+                entity.HasOne(d => d.Event)
+                    .WithMany(p => p.Vote)
+                    .HasForeignKey(d => d.EventId)
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .HasConstraintName("FK_EventId");
+
+                entity.HasOne(d => d.User)
+                    .WithMany(p => p.Vote)
+                    .HasForeignKey(d => d.UserId)
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .HasConstraintName("FK_UseIdr");
             });
         }
     }

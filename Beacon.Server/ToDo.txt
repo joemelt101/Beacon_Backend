@@ -1,0 +1,15 @@
+﻿TODO List
+	Finish creating the database
+		User  [x]
+		Event [x]
+	Get it imported [x]
+	Work with Group to Go Over API Again [x]
+		Login
+			Discuss tokens [x]
+		Logout [x]
+		Create Event 
+		Delete Event
+		API listed
+		Geolocation
+		Constraints
+	Create API [ ]

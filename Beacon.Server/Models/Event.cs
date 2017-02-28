@@ -5,12 +5,24 @@ namespace Beacon.Server.Models
 {
     public partial class Event
     {
-        public int Eid { get; set; }
-        public string EName { get; set; }
-        public string EDescription { get; set; }
-        public byte[] TimeLastUpdated { get; set; }
-        public int? CreatorId { get; set; }
+        public Event()
+        {
+            Token = new HashSet<Token>();
+            User = new HashSet<User>();
+            Vote = new HashSet<Vote>();
+        }
 
-        public virtual Users Creator { get; set; }
+        public int Id { get; set; }
+        public string Name { get; set; }
+        public string Description { get; set; }
+        public DateTime? TimeLastUpdated { get; set; }
+        public int? CreatorId { get; set; }
+        public decimal? Latitude { get; set; }
+        public decimal? Longitude { get; set; }
+
+        public virtual ICollection<Token> Token { get; set; }
+        public virtual ICollection<User> User { get; set; }
+        public virtual ICollection<Vote> Vote { get; set; }
+        public virtual User Creator { get; set; }
     }
 }

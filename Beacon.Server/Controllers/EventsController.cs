@@ -6,22 +6,19 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Beacon.Server.Models;
+using Beacon.Server.Filters;
 
 namespace Beacon.Server.Controllers
 {
     [Produces("application/json")]
     [Route("api/Events")]
+    [BeaconAuthenticationFilter]
     public class EventsController : Controller
     {
-        private readonly BeaconContext _context;
-
-        public EventsController(BeaconContext context)
-        {
-            _context = context;
-        }
+        private readonly BeaconContext _context = new BeaconContext();        
 
         [HttpGet("da")]
-        public async Task<IActionResult> DownloadAllEventsInArea([FromRoute] decimal latitude, [FromRoute] decimal longitude)
+        public async Task<IActionResult> DownloadAllEventsInArea([FromQuery] decimal latitude, [FromQuery] decimal longitude)
         {
             if (!ModelState.IsValid)
             {
@@ -35,7 +32,7 @@ namespace Beacon.Server.Controllers
         }
 
         [HttpGet("du")]
-        public async Task<IActionResult> DownloadUpdates([FromRoute] decimal latitude, [FromRoute] decimal longitude, [FromRoute] DateTime lastUpdatedTime)
+        public async Task<IActionResult> DownloadUpdates([FromQuery] decimal latitude, [FromQuery] decimal longitude, [FromQuery] DateTime lastUpdatedTime)
         {
             if (!ModelState.IsValid)
             {
@@ -71,15 +68,30 @@ namespace Beacon.Server.Controllers
         //}
 
         // POST: api/Events
-        [HttpPost]
-        public async Task<IActionResult> PostEvent([FromBody] Event @event)
+        [HttpPost("Create")]
+        public async Task<IActionResult> CreateEvent([FromBody] Event @event, [FromQuery] string token)
         {
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
             }
 
-            _context.Event.Add(@event);
+            var cToken = _context.Token.FirstOrDefault(t => t.Value.Equals(token));
+
+            // Token is validated by the authenticator...
+
+            Event newEvent = new Event()
+            {
+                Id = cToken.CorrespondingLoginId,
+                Description = @event.Description,
+                Latitude = @event.Latitude,
+                Longitude = @event.Longitude,
+                Name = @event.Name,
+                TimeLastUpdated = DateTime.Now
+            };
+
+            _context.Event.Add(newEvent);
+
             try
             {
                 await _context.SaveChangesAsync();

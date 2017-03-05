@@ -8,6 +8,6 @@ namespace Beacon.Server.Models
         public string Value { get; set; }
         public int CorrespondingLoginId { get; set; }
 
-        public virtual Event CorrespondingLogin { get; set; }
+        public virtual User CorrespondingLogin { get; set; }
     }
 }

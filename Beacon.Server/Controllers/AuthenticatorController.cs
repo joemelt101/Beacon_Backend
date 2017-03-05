@@ -2,6 +2,8 @@ using System;
 using System.Linq;
 using Microsoft.AspNetCore.Mvc;
 using Beacon.Server.Models;
+using System.Diagnostics;
+using Beacon.Server.Filters;
 
 namespace Beacon.Server.Controllers
 {
@@ -11,23 +13,25 @@ namespace Beacon.Server.Controllers
     [Route("api/Authenticator")]
     public class AuthenticatorController : Controller
     {
-        BeaconContext _context;
+        BeaconContext _context = new BeaconContext();
 
-        public AuthenticatorController(BeaconContext context)
-        {
-            _context = context;
-        }
+        //public AuthenticatorController(BeaconContext context)
+        //{
+        //    _context = context;
+        //}
 
         [HttpGet("Token")]
-        public IActionResult Token([FromRoute] string username, [FromRoute] string password)
+        [ActionName("Token")]
+        public IActionResult Token([FromQuery] string username, [FromQuery] string password)
         {
             /////////////////////////////////
             // Validate Username and Password
 
             // TODO: Add hashing
-            bool userExists = _context.User.Where(u => u.UserName.Equals(username) && u.HashedPassword.Equals(password)).Any();
+            //var us = _context.User.Where(u => u.UserName.Equals("joemelt101")).First();
+            User user = _context.User.FirstOrDefault(u => u.UserName.Equals(username) && u.HashedPassword.Equals(password));
 
-            if (!userExists)
+            if (user == null)
             {
                 return Json(new { LoginSuccessful = false });
             }
@@ -51,6 +55,7 @@ namespace Beacon.Server.Controllers
 
             Token newToken = new Token()
             {
+                CorrespondingLoginId = user.Id,
                 Value = new string(randomCharArray)
             };
 
@@ -63,19 +68,20 @@ namespace Beacon.Server.Controllers
         }
 
         [HttpGet("Logout")]
-        public IActionResult Logout([FromRoute] string tokenValue)
+        [BeaconAuthenticationFilter]
+        public IActionResult Logout([FromQuery] string token)
         {
             try
             {
                 // Just delete the token to logout
-                _context.Token.Remove(new Models.Token() { Value = tokenValue });
+                _context.Token.Remove(new Token() { Value = token });
                 _context.SaveChanges();
 
                 return Json(new { DeletedSuccessfully = true });
             }
             catch (Exception)
             {
-                return Json(new { DeletedSuccessfully = true });
+                return Json(new { DeletedSuccessfully = false });
             }
         }
 

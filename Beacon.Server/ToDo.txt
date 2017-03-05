@@ -1,15 +1,8 @@
-﻿TODO List
-	Finish creating the database
-		User  [x]
-		Event [x]
-	Get it imported [x]
-	Work with Group to Go Over API Again [x]
-		Login
-			Discuss tokens [x]
+﻿TODO List 2.0
+	Update database to include geospatial data
+	Create custom query for geospatial data
+	TEST
+		Login [x]
 		Logout [x]
-		Create Event 
-		Delete Event
-		API listed
-		Geolocation
-		Constraints
-	Create API [ ]
+		Create event
+		Delete event

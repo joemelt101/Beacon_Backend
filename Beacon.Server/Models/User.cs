@@ -8,6 +8,7 @@ namespace Beacon.Server.Models
         public User()
         {
             Event = new HashSet<Event>();
+            Token = new HashSet<Token>();
             Vote = new HashSet<Vote>();
         }
 
@@ -20,6 +21,7 @@ namespace Beacon.Server.Models
         public int? CurrentAttendedEventId { get; set; }
 
         public virtual ICollection<Event> Event { get; set; }
+        public virtual ICollection<Token> Token { get; set; }
         public virtual ICollection<Vote> Vote { get; set; }
         public virtual Event CurrentAttendedEvent { get; set; }
     }

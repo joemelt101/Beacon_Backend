@@ -19,6 +19,7 @@ namespace Beacon.Server.Models
         public string Salt { get; set; }
         public string UserName { get; set; }
         public int? CurrentAttendedEventId { get; set; }
+        public string Email { get; set; }
 
         public virtual ICollection<Event> Event { get; set; }
         public virtual ICollection<Token> Token { get; set; }

@@ -1,8 +1,6 @@
 ﻿TODO List 2.0
-	Update database to include geospatial data
-	Create custom query for geospatial data
-	TEST
-		Login [x]
-		Logout [x]
-		Create event
-		Delete event
+	Prevent double logins
+	Handle geospatial issues (around -180 to 180 for longitude) >> Use vector mathematics to handle
+	Prevent deletion of user account by other user (require the appropriate login for deletion)
+	Handle caching of requests per second
+	Create login validation (emails will do!)

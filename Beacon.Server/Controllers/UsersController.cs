@@ -1,11 +1,11 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Beacon.Server.Models;
+using System.Security.Cryptography;
 
 namespace Beacon.Server.Controllers
 {
@@ -13,115 +13,113 @@ namespace Beacon.Server.Controllers
     [Route("api/Users")]
     public class UsersController : Controller
     {
-        private readonly BeaconContext _context;
+        private readonly BeaconContext _context = new BeaconContext();
 
-        public UsersController(BeaconContext context)
-        {
-            _context = context;
-        }
+        public UsersController() {}
 
         // GET: api/Users/5
         [HttpGet("{id}")]
-        public async Task<IActionResult> GetUser([FromRoute] int id)
+        public async Task<IActionResult> GetUser([FromRoute] int id, [FromQuery] string token)
         {
             if (!ModelState.IsValid)
             {
-                return BadRequest(ModelState);
+                return Json(new { WasSuccessful = false, Message = "Invalid model state" });
             }
 
             var user = await _context.User.SingleOrDefaultAsync(m => m.Id == id);
-
             if (user == null)
             {
-                return NotFound();
+                return Json(new { WasSuccessful = false, Message = "Invalid user id" });
             }
 
-            return Ok(user);
+            var tokenMatch = await _context.Token.SingleOrDefaultAsync(t => t.Value.Equals(token));
+            if (tokenMatch == null)
+            {
+                return Json(new { WasSuccessful = false, Message = "Invalid Token" });
+            }
+
+            return Json(new { WasSuccessful = true, User = user } );
         }
 
-        // PUT: api/Users/5
-        [HttpPut("{id}")]
-        public async Task<IActionResult> PutUser([FromRoute] int id, [FromBody] User user)
+        [HttpGet("UsernameIsTaken")]
+        public async Task<IActionResult> UsernameIsTaken([FromQuery] string username)
         {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
-
-            if (id != user.Id)
-            {
-                return BadRequest();
-            }
-
-            _context.Entry(user).State = EntityState.Modified;
-
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!UserExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
-            }
-
-            return NoContent();
+            //TODO: Finish this!!!
+            bool taken = await _context.User.AnyAsync(u => u.UserName.Equals(username));
+            return Json(new { IsTaken = taken });
         }
 
         // POST: api/Users
-        [HttpPost]
-        public async Task<IActionResult> PostUser([FromBody] User user)
+        [HttpPost("PostUser")]
+        public async Task<IActionResult> PostUser(
+            [FromQuery] string username, 
+            [FromQuery] string email, 
+            [FromQuery] string password)
         {
             if (!ModelState.IsValid)
             {
-                return BadRequest(ModelState);
+                return Json(new { WasSuccessful = false, Message = "Invalid model state." });
             }
 
+            email = email.ToLower();
+            username = username.ToLower();
+
+            // Validate that the user doesn't currently exist...
+            bool alreadyExists = false;
+
+            // Initiate user...
+            User user = new User()
+            {
+                UserName = username,
+                Salt = Helper.GenerateSalt()
+            };
+
+            user.Id = 0; // Must be zero to ensure that the database sets it
+            user.HashedPassword = Helper.HashPassword(password, user.Salt);
             _context.User.Add(user);
-            try
+
+            await _context.SaveChangesAsync();
+
+            return Json(new { WasSuccessful = true });
+        }
+
+        [HttpPost("ChangePassword")]
+        public async Task<IActionResult> ChangePassword([FromQuery] int id, [FromQuery] string oldPassword, [FromQuery] string newPassword)
+        {
+            if (! ModelState.IsValid)
             {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateException)
-            {
-                if (UserExists(user.Id))
-                {
-                    return new StatusCodeResult(StatusCodes.Status409Conflict);
-                }
-                else
-                {
-                    throw;
-                }
+                return Json(new { WasSuccessful = false, Message = "Invalid model state" });
             }
 
-            return CreatedAtAction("GetUser", new { id = user.Id }, user);
+            User user = await _context.User.FirstOrDefaultAsync(u => u.Id == id);
+            if (user.HashedPassword.Equals(Helper.HashPassword(oldPassword, user.Salt)))
+            {
+                // Good to go!
+                return Json(new { WasSuccessful = true });
+            }
+
+            return Json(new { WasSuccessful = false, Message = "Invalid old password" });
         }
 
         // DELETE: api/Users/5
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteUser([FromRoute] int id)
+        public async Task<IActionResult> DeleteUser([FromRoute] int id, [FromQuery] string token)
         {
             if (!ModelState.IsValid)
             {
-                return BadRequest(ModelState);
+                return Json(new { WasSuccessful = false, Message = "Invalid model state!" });
             }
 
             var user = await _context.User.SingleOrDefaultAsync(m => m.Id == id);
             if (user == null)
             {
-                return NotFound();
+                return Json(new { WasSuccessful = false, Message = "Could not find user!" });
             }
 
             _context.User.Remove(user);
             await _context.SaveChangesAsync();
 
-            return Ok(user);
+            return Json(new { WasSuccessful = true });
         }
 
         private bool UserExists(int id)

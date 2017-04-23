@@ -27,6 +27,8 @@ namespace Beacon.Server.Models
                 entity.HasIndex(e => e.Longitude)
                     .HasName("IX_Longitude");
 
+                entity.Property(e => e.Deleted).HasDefaultValueSql("0");
+
                 entity.Property(e => e.Description).HasColumnType("text");
 
                 entity.Property(e => e.Latitude).HasColumnType("decimal");
@@ -35,7 +37,15 @@ namespace Beacon.Server.Models
 
                 entity.Property(e => e.Name).HasColumnType("varchar(20)");
 
-                entity.Property(e => e.TimeLastUpdated).HasColumnType("datetime");
+                entity.Property(e => e.TimeCreated)
+                    .HasColumnType("datetime")
+                    .HasDefaultValueSql("getutcdate()");
+
+                entity.Property(e => e.TimeLastUpdated)
+                    .HasColumnType("datetime")
+                    .HasDefaultValueSql("getutcdate()");
+
+                entity.Property(e => e.VoteCount).HasDefaultValueSql("0");
 
                 entity.HasOne(d => d.Creator)
                     .WithMany(p => p.Event)
@@ -59,21 +69,17 @@ namespace Beacon.Server.Models
 
             modelBuilder.Entity<User>(entity =>
             {
-                entity.Property(e => e.Id).ValueGeneratedNever();
-
                 entity.Property(e => e.CurrentAttendedEventId).HasColumnName("CurrentAttendedEventID");
 
-                entity.Property(e => e.FirstName)
-                    .IsRequired()
-                    .HasColumnType("varchar(20)");
+                entity.Property(e => e.Email).HasColumnType("varchar(40)");
+
+                entity.Property(e => e.FirstName).HasColumnType("varchar(20)");
 
                 entity.Property(e => e.HashedPassword)
                     .IsRequired()
                     .HasColumnType("varchar(50)");
 
-                entity.Property(e => e.LastName)
-                    .IsRequired()
-                    .HasColumnType("varchar(20)");
+                entity.Property(e => e.LastName).HasColumnType("varchar(20)");
 
                 entity.Property(e => e.Salt)
                     .IsRequired()

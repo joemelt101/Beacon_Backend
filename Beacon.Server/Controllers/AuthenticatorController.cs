@@ -1,9 +1,10 @@
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Beacon.Server.Models;
-using System.Diagnostics;
 using Beacon.Server.Filters;
+using Microsoft.EntityFrameworkCore;
 
 namespace Beacon.Server.Controllers
 {
@@ -22,18 +23,23 @@ namespace Beacon.Server.Controllers
 
         [HttpGet("Token")]
         [ActionName("Token")]
-        public IActionResult Token([FromQuery] string username, [FromQuery] string password)
+        public async Task<IActionResult> Token([FromQuery] string username, [FromQuery] string password)
         {
             /////////////////////////////////
             // Validate Username and Password
-
-            // TODO: Add hashing
-            //var us = _context.User.Where(u => u.UserName.Equals("joemelt101")).First();
-            User user = _context.User.FirstOrDefault(u => u.UserName.Equals(username) && u.HashedPassword.Equals(password));
-
+            
+            User user = await _context.User.FirstOrDefaultAsync(u => u.UserName.Equals(username));
+            
             if (user == null)
             {
-                return Json(new { LoginSuccessful = false });
+                return Json(new { LoginSuccessful = false, Message = "Username not found!" });
+            }
+
+            String hashedPassword = Helper.HashPassword(password, user.Salt);
+
+            if (! hashedPassword.Equals(user.HashedPassword))
+            {
+                return Json(new { LoginSuccessful = false, Message = "Hashed passwords don't match!" });
             }
 
             ///////////////////
@@ -62,20 +68,46 @@ namespace Beacon.Server.Controllers
             //////////////////////////////
             // Write token to the database
             _context.Token.Add(newToken);
-            _context.SaveChanges();
+            await _context.SaveChangesAsync();
 
-            return Json(new { LoginSuccessful = true, Token = tokenValue });
+            return Json(new { LoginSuccessful = true, Token = tokenValue, UserId = user.Id });
+        }
+
+        [HttpGet("IsValidLogin")]
+        public async Task<IActionResult> IsValidLogin([FromQuery] string username, [FromQuery] string password)
+        {
+            User user = await _context.User.FirstOrDefaultAsync(u => u.UserName.Equals(username));
+
+            if (user == null)
+            {
+                return Json(new { WasSuccessful = false, Message = "Username does not exist!" });
+            }
+
+            // Hashed password
+            string submittedHashedPassword = Helper.HashPassword(password, user.Salt);
+
+            if (! submittedHashedPassword.Equals(user.HashedPassword))
+            {
+                // Passwords don't match!
+                return Json(new { WasSuccessful = false, Message = "Invalid password." });
+            }
+
+            // Made it this far
+            // Username exists
+            // Passwords match
+            // Therefore --->>> Good to go!
+            return Json(new { WasSuccessful = true });
         }
 
         [HttpGet("Logout")]
         [BeaconAuthenticationFilter]
-        public IActionResult Logout([FromQuery] string token)
+        public async Task<IActionResult> Logout([FromQuery] string token)
         {
             try
             {
                 // Just delete the token to logout
                 _context.Token.Remove(new Token() { Value = token });
-                _context.SaveChanges();
+                await _context.SaveChangesAsync();
 
                 return Json(new { DeletedSuccessfully = true });
             }

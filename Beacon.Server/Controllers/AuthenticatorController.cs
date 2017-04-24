@@ -25,6 +25,11 @@ namespace Beacon.Server.Controllers
         [ActionName("Token")]
         public async Task<IActionResult> Token([FromQuery] string username, [FromQuery] string password)
         {
+            if (username == null || password == null)
+            {
+                int a = 10;
+            }
+
             /////////////////////////////////
             // Validate Username and Password
             

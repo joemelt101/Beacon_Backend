@@ -1,5 +1,18 @@
-﻿TODO List 2.0
-	Prevent double logins
+﻿TODO List
+	Get events to download initially [Done]
+	Get events to delete [Done]
+	Validate that the backend marks events for deletion [Done]
+	Vote [Done]
+	Get events to do soft downloading [Done]
+		Make sure to include a timestamp from the server! [Done] 
+	Setup get upvote and downvote data [Done]
+	Delete Events [Done]
+	Notifications 
+	Update Events [Done]
+	Fix backup button [Done]
+	List View
+
+	Prevent double logins [Done]
 	Handle geospatial issues (around -180 to 180 for longitude) >> Use vector mathematics to handle
 	Prevent deletion of user account by other user (require the appropriate login for deletion)
 	Handle caching of requests per second

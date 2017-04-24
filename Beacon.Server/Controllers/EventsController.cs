@@ -122,8 +122,11 @@ namespace Beacon.Server.Controllers
                 e.Longitude < gb.MaxLongitude &&
                 e.Longitude > gb.MinLongitude 
                 )).ToListAsync();
+
+            // Determine if any of these events need to be deleted...
+            var eventsToDelete = events.Where(Policy.ShouldMarkEventForDeletion);
             
-            return Json(new { WasSuccessful = true, Events = @events });
+            return Json(new { WasSuccessful = true, Events = @events, CurrentServerTime = DateTime.UtcNow });
         }
 
         // GET: api/Events/da?lat=49.452&lng=-83.194&lastUpdatedTime=2017-03-04T22:45:39.593
@@ -145,9 +148,9 @@ namespace Beacon.Server.Controllers
                 e.Longitude > gb.MinLongitude &&
                 e.TimeLastUpdated > lastUpdatedTime
                 )).ToListAsync();
-
+            
             // Determine if any of these events need to be deleted...
-            var eventsToDelete = events.Where(Policy.ShouldMarkEventForDeletion);
+            var eventsToDelete = @events.Where(Policy.ShouldMarkEventForDeletion);
 
             foreach (Event e in eventsToDelete)
             {
@@ -158,7 +161,7 @@ namespace Beacon.Server.Controllers
             _context.UpdateRange(eventsToDelete);
             await _context.SaveChangesAsync();
 
-            return Json(new { WasSuccessful = true, Events = @events});
+            return Json(new { WasSuccessful = true, Events = @events, CurrentServerTime = DateTime.UtcNow});
         }
 
         //// GET: api/Events/5
@@ -184,7 +187,7 @@ namespace Beacon.Server.Controllers
 
         [HttpPost("Event")]
         public async Task<IActionResult> UpdateEvent([FromBody] Event eventToUpdate)
-        {
+        {            
             if (! ModelState.IsValid)
             {
                 return Json(new { WasSuccessful = false, Message = "Invalid model state for event update" });
@@ -239,7 +242,7 @@ namespace Beacon.Server.Controllers
 
                 await _context.SaveChangesAsync();
 
-                return Json(new { WasSuccessful = true });
+                return Json(new { WasSuccessful = true, VoteValueRemoved = userVote.NumVotes});
             }
 
             // Else, the user never voted for this...
@@ -264,13 +267,18 @@ namespace Beacon.Server.Controllers
             {
                 // Vote for it now
                 // Update the vote database
-                _context.Vote.Add(new Vote() { EventId = eventId, UserId = currentUser, NumVotes = 1 });
+                Vote v = new Vote() { EventId = eventId, UserId = currentUser, NumVotes = 1 };
+                if (! voteUp)
+                {
+                    v.NumVotes = -1;
+                }
+                _context.Vote.Add(v);
 
                 Event eventUpvoted = await _context.Event.FirstOrDefaultAsync(e => e.Id == eventId);
 
                 if (eventUpvoted == null)
                 {
-                    return BadRequest(ModelState);
+                    return Json(new { WasSuccessful = false, Message = "Could not find the event upvoted." });
                 }
 
                 if (voteUp)
@@ -285,16 +293,16 @@ namespace Beacon.Server.Controllers
                 _context.Event.Update(eventUpvoted);
 
                 await _context.SaveChangesAsync();
-
-                return Json(new { WasSuccessful = true });
+                
+                return Json(new { WasSuccessful = true, EventVotedFor = v.EventId, NumVotes = v.NumVotes, NumVotesOnEvent =  eventUpvoted.VoteCount });
             }
 
             // If they have, then notify that the event has already been upvoted...
-            return Json(new { WasSuccessful = true, Message = "User has already voted on the event..." });
+            return Json(new { WasSuccessful = false, Message = "User has already voted on the event..." });
         }
 
-        [HttpGet("votedFor")]
-        private async Task<IActionResult> EventsVotedFor(string token)
+        [HttpGet("VotedFor")]
+        public async Task<IActionResult> EventsVotedFor(string token)
         {
             // Get user id
             int userid;
@@ -309,7 +317,7 @@ namespace Beacon.Server.Controllers
             }
             else
             {
-                return Json(new { wasSuccessful = false });
+                return Json(new { WasSuccessful = false });
             }
         }
 
@@ -362,7 +370,7 @@ namespace Beacon.Server.Controllers
 
         // DELETE: api/Events/5
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteEvent([FromRoute] int id, [FromRoute] string token)
+        public async Task<IActionResult> DeleteEvent([FromRoute] int id, [FromQuery] string token)
         {
             if (!ModelState.IsValid)
             {
@@ -370,7 +378,7 @@ namespace Beacon.Server.Controllers
             }
 
             // Get the token
-            var matchingToken = await _context.Token.Where(t => t.Value == token).FirstAsync();
+            var matchingToken = await _context.Token.Where(t => t.Value.Equals(token)).FirstAsync();
 
             if (matchingToken == null)
             {
@@ -387,7 +395,7 @@ namespace Beacon.Server.Controllers
 
             if (loginId == @event.CreatorId)
             {
-                _context.Event.Remove(@event);
+                @event.Deleted = true;
                 await _context.SaveChangesAsync();
                 return Json(new { WasSuccessful = true, EventId = @event.Id });
             }

@@ -228,13 +228,14 @@ namespace Beacon.Server.Controllers
                 return Json(new { WasSuccessful = false, Message = "Invalid model state..." });
             }
 
-            Token userToken = await _context.Token.FirstOrDefaultAsync(t => t.Value.Equals(token));
+               Token userToken = await _context.Token.FirstOrDefaultAsync(t => t.Value.Equals(token));
             int userId = userToken.CorrespondingLoginId;
             Vote userVote = await _context.Vote.FirstOrDefaultAsync(v => v.UserId == userId);
 
             if (userVote != null)
             {
                 // The user has voted for this, so their vote must be removed...
+                int voteValueRemoved = userVote.NumVotes;
                 _context.Vote.Remove(userVote);
                 Event eventVotedOn = await _context.Event.FirstAsync(e => e.Id == userVote.EventId);
                 userVote.Event.VoteCount -= userVote.NumVotes;
@@ -242,7 +243,7 @@ namespace Beacon.Server.Controllers
 
                 await _context.SaveChangesAsync();
 
-                return Json(new { WasSuccessful = true, VoteValueRemoved = userVote.NumVotes});
+                return Json(new { WasSuccessful = true, VoteValueRemoved = voteValueRemoved});
             }
 
             // Else, the user never voted for this...

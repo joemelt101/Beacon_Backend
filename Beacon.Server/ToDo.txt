@@ -7,10 +7,10 @@
 		Make sure to include a timestamp from the server! [Done] 
 	Setup get upvote and downvote data [Done]
 	Delete Events [Done]
-	Notifications 
+	Notifications []
 	Update Events [Done]
 	Fix backup button [Done]
-	List View
+	List View [Never got done]
 
 	Prevent double logins [Done]
 	Handle geospatial issues (around -180 to 180 for longitude) >> Use vector mathematics to handle
